@@ -23,7 +23,6 @@ import com.assignment.product.exception.BadRequestException;
 import com.assignment.product.exception.ResourceNotFoundException;
 import com.assignment.product.model.Product;
 import com.assignment.product.repository.ProductRepository;
-import com.assignment.product.validation.ProductValidation;
 
 @Validated
 @RestController
@@ -32,9 +31,6 @@ public class ProductController {
 	
 	@Autowired
 	ProductRepository productRepository;
-	
-	@Autowired
-	ProductValidation productValidation;
 	
 	 Logger logger = LoggerFactory.getLogger(ProductController.class);
 	
@@ -67,8 +63,6 @@ public class ProductController {
 	public ResponseEntity<Product> createTutorial(@Valid @RequestBody Product product) throws BadRequestException{
 		
 		logger.info("Request to save product data");
-		
-		productValidation.validateProduct(product);
 			Product savedProduct = productRepository
 					.save(new Product(product.getProductId(), product.getDescription(), product.getUom()));
 		logger.info("Product {} saved"+savedProduct);
@@ -77,10 +71,9 @@ public class ProductController {
 	}
 	
 	@GetMapping("/products/{id}")
-	public ResponseEntity<Product> getProductById(@PathVariable(value = "id") Long productId)
+	public ResponseEntity<Product> getProductById(@PathVariable(value = "id") Long id)
 			throws ResourceNotFoundException {
-		Product product = productRepository.findById(productId)
-				.orElseThrow(() -> new ResourceNotFoundException("Product not found for this id :: " + productId));
+		Product product = productRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Product not found for this id :: " + id));
 		return new ResponseEntity<>(product, HttpStatus.OK);
 	}	
 

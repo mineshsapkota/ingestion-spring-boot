@@ -4,6 +4,7 @@ import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Id;
 import javax.persistence.Table;
+import javax.validation.constraints.NotEmpty;
 
 @Entity
 @Table(name ="products")
@@ -11,10 +12,13 @@ public class Product {
 	
 	@Id
 	@Column(name = "product_Id", nullable = false)
+	@NotEmpty(message="Product Id cannot be null or empty")
 	private String productId;
 	@Column(name = "description", nullable = false)
+	@NotEmpty(message="Product description cannot be null or empty")
 	private String description;
 	@Column(name = "uom", nullable = false)
+	@NotEmpty(message="Product uom cannot be null or empty")
 	private String uom;
 	
 	public Product() {
