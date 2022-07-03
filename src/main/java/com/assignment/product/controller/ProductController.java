@@ -19,7 +19,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.assignment.product.exception.BadRequestException;
 import com.assignment.product.exception.ResourceNotFoundException;
 import com.assignment.product.model.Product;
 import com.assignment.product.repository.ProductRepository;
@@ -60,7 +59,7 @@ public class ProductController {
 	}
 	
 	@PostMapping("/products")
-	public ResponseEntity<Product> createTutorial(@Valid @RequestBody Product product) throws BadRequestException{
+	public ResponseEntity<Product> createTutorial(@Valid @RequestBody Product product) {
 		
 		logger.info("Request to save product data");
 			Product savedProduct = productRepository

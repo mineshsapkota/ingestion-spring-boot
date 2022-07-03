@@ -1,14 +1,10 @@
 package com.assignment.product.exception;
 
-import java.util.ArrayList;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
-import javax.validation.ConstraintViolationException;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.support.DefaultMessageSourceResolvable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -16,59 +12,60 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
 @ControllerAdvice
-public class GlobalExceptionHandler extends  ResponseEntityExceptionHandler{
-	
-	@Override
-	  protected ResponseEntity<Object> handleMethodArgumentNotValid(
-	      MethodArgumentNotValidException ex, HttpHeaders headers,
-	      HttpStatus status, WebRequest request) {
+public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
-	    Map<String, List<String>> body = new HashMap<>();
+    private static final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
-	    List<String> errors = ex.getBindingResult()
-	        .getFieldErrors()
-	        .stream()
-	        .map(DefaultMessageSourceResolvable::getDefaultMessage)
-	        .collect(Collectors.toList());
+    @Override
+    protected ResponseEntity < Object > handleMethodArgumentNotValid(MethodArgumentNotValidException methodArgumentNotValidException, HttpHeaders headers, HttpStatus status, WebRequest webRequest) {
 
-	    body.put("errors", errors);
+        String ERROR_MESSAGE = methodArgumentNotValidException.getMessage();
 
-	    return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
-	  }
-
-	@ExceptionHandler(ResourceNotFoundException.class)
-	public ResponseEntity<?> resourceNotFoundException(ResourceNotFoundException ex, WebRequest request) {
-		ErrorDetails errorDetails = new ErrorDetails(new Date(), ex.getMessage(), request.getDescription(false));
-		return new ResponseEntity<>(errorDetails, HttpStatus.NOT_FOUND);
-	}
-	
-	@ExceptionHandler(ConstraintViolationException.class)
-	@ResponseStatus(HttpStatus.BAD_REQUEST)
-	  public ResponseEntity<?> constraintViolationException(ConstraintViolationException ex, WebRequest request) {
-	    List<String> errors = new ArrayList<>();
-
-	    ex.getConstraintViolations().forEach(cv -> errors.add(cv.getMessage()));
-
-	    Map<String, List<String>> result = new HashMap<>();
-	    result.put("errors", errors);
-
-	    return new ResponseEntity<>(result, HttpStatus.BAD_REQUEST);
-	  }
-	
-	@ExceptionHandler(BadRequestException.class)
-	public ResponseEntity<?> badRequest(BadRequestException ex, WebRequest request) {
-		ErrorDetails errorDetails = new ErrorDetails(new Date(), ex.getMessage(), request.getDescription(false));
-		return new ResponseEntity<>(errorDetails, HttpStatus.BAD_REQUEST);
-	}
-
-	@ExceptionHandler(Exception.class)
-	public ResponseEntity<?> globalExcpetionHandler(Exception ex, WebRequest request) {
-		ErrorDetails errorDetails = new ErrorDetails(new Date(), ex.getMessage(), request.getDescription(false));
-		return new ResponseEntity<>(errorDetails, HttpStatus.INTERNAL_SERVER_ERROR);
-	}
+        try {
+            ERROR_MESSAGE = methodArgumentNotValidException.getBindingResult()
+                .getFieldErrors()
+                .stream()
+                .map(DefaultMessageSourceResolvable::getDefaultMessage)
+                .collect(Collectors.joining(", "));
+        } catch (Exception e) {
+            logger.error("Error constructing error message", e);
+        }
+        logger.error(ERROR_MESSAGE, methodArgumentNotValidException);
+        ErrorDetails errorResponse = getErrorResponse(HttpStatus.BAD_REQUEST, ERROR_MESSAGE, webRequest);
+        return handleExceptionInternal(methodArgumentNotValidException, errorResponse, headers, HttpStatus.BAD_REQUEST, webRequest);
+    }
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity < Object > handleIllegalArgumentException(IllegalArgumentException exception, WebRequest webRequest) {
+        final String ERROR_MESSAGE = exception.getMessage();
+        logger.error(ERROR_MESSAGE, exception);
+        ErrorDetails errorResponse = getErrorResponse(HttpStatus.BAD_REQUEST, ERROR_MESSAGE, webRequest);
+        return handleExceptionInternal(exception, errorResponse, new HttpHeaders(), HttpStatus.BAD_REQUEST, webRequest);
+    }
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity < Object > handleAnyException(Exception exception, WebRequest webRequest) {
+        final String ERROR_MESSAGE = "An unexpected error occurred";
+        logger.error(ERROR_MESSAGE, exception);
+        ErrorDetails errorResponse = getErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, ERROR_MESSAGE, webRequest);
+        return handleExceptionInternal(exception, errorResponse, new HttpHeaders(), HttpStatus.INTERNAL_SERVER_ERROR, webRequest);
+    }
+   
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity <?> resourceNotFoundException(ResourceNotFoundException exception, WebRequest webRequest) {
+    	
+    	final String ERROR_MESSAGE = exception.getMessage();
+        logger.error(ERROR_MESSAGE, exception);
+    	ErrorDetails errorResponse = getErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, ERROR_MESSAGE, webRequest);
+        return new ResponseEntity < > (errorResponse, HttpStatus.NOT_FOUND);
+    }
+    
+    private ErrorDetails getErrorResponse(HttpStatus status, String errorMessage, WebRequest request) {
+        if (errorMessage.isEmpty()) {
+            errorMessage = "An unexpected error occurred";
+        }
+        return new ErrorDetails(status.value(), new Date(), errorMessage, request.getDescription(false));
+    }
 }
